@@ -26,26 +26,24 @@ $(SERVER): src/server.o $(filter-out src/client.o, $(OBJS))
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
 USER := $(shell whoami)
-SERVICE := myserver
-SUPERVISOR_CONF := /etc/supervisor/conf.d/$(SERVICE).conf
-LOG_DIR := /var/log/$(SERVICE)
+include .env
 
 # Target to create the Supervisor configuration file
 config: create-logs-dir
 	@echo "Generating Supervisor configuration file $(SERVICE) at $(SUPERVISOR_CONF)..."
-	@echo "[program:$(SERVICE)]" > $(SERVICE).conf.tmp
-	@echo "command=$(shell pwd)/$(SERVER)" >> $(SERVICE).conf.tmp
-	@echo "directory=$(shell pwd)" >> $(SERVICE).conf.tmp
+	@echo "[program:$(SERVICE)]" > $(SERVICE_CONF)
+	@echo "command=$(shell pwd)/$(SERVER)" >> $(SERVICE_CONF)
+	@echo "directory=$(shell pwd)" >> $(SERVICE_CONF)
 
-	@echo "autostart=true" >> $(SERVICE).conf.tmp
-	@echo "autorestart=true" >> $(SERVICE).conf.tmp
-	@echo "startsecs=2" >> $(SERVICE).conf.tmp
-	@echo "startretries=3" >> $(SERVICE).conf.tmp
-	@echo "stopsignal=QUIT" >> $(SERVICE).conf.tmp
-	@echo "stderr_logfile=/var/log/$(SERVICE)/$(SERVICE).err.log" >> $(SERVICE).conf.tmp
-	@echo "stdout_logfile=/var/log/$(SERVICE)/$(SERVICE).out.log" >> $(SERVICE).conf.tmp
-	@echo "user=$(USER)" >> $(SERVICE).conf.tmp
-	@sudo mv $(SERVICE).conf.tmp $(SUPERVISOR_CONF)
+	@echo "autostart=false" >> $(SERVICE_CONF)
+	@echo "autorestart=false" >> $(SERVICE_CONF)
+	@echo "startsecs=2" >> $(SERVICE_CONF)
+	@echo "startretries=3" >> $(SERVICE_CONF)
+	@echo "stopsignal=QUIT" >> $(SERVICE_CONF)
+	@echo "stderr_logfile=$(ERR_LOG)" >> $(SERVICE_CONF)
+	@echo "stdout_logfile=$(OUT_LOG)" >> $(SERVICE_CONF)
+	@echo "user=$(USER)" >> $(SERVICE_CONF)
+	@sudo mv $(SERVICE_CONF) $(SUPERVISOR_CONF)
 	@sudo supervisorctl reread
 	@sudo supervisorctl update
 	@echo "Supervisor configuration for $(SERVICE) installed successfully at $(SUPERVISOR_CONF)."
@@ -62,6 +60,6 @@ create-logs-dir:
 	@sudo chmod 755 $(LOG_DIR)
 
 clean:
-	rm -f $(OBJS) $(SERVICE).conf.tmp spv.config
+	rm -f $(OBJS) $(SERVICE_CONF) spv.config
 
 .PHONY: all create-logs-dir config start-server clean 
